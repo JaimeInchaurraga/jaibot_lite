@@ -1,1 +1,4 @@
 .venv/
+app/config/secrets.env
+__pycache__/
+app/logs/
