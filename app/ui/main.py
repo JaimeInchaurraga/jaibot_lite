@@ -10,100 +10,114 @@ import subprocess
 # ===========================
 st.set_page_config(page_title="JAIBOT LITE", page_icon="🤖", layout="centered")
 
+# ===========================
+# 💅 ESTILO GLOBAL
+# ===========================
+st.markdown("""
+<style>
+body {
+    background: linear-gradient(180deg, #f8f9fc 0%, #eef1f8 100%);
+    font-family: 'Inter', sans-serif;
+}
+.chat-bubble-user {
+    background-color: #e8f0fe;
+    padding: 0.6rem 1rem;
+    border-radius: 1rem;
+    margin-bottom: 0.4rem;
+    max-width: 85%;
+}
+.chat-bubble-bot {
+    background-color: #f1f3f4;
+    padding: 0.6rem 1rem;
+    border-radius: 1rem;
+    margin-bottom: 0.4rem;
+    max-width: 85%;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🤖 JAIBOT LITE — Demo Interactiva")
-st.caption("Habla con tu asistente conectado a n8n + OpenAI")
+st.caption("Un asistente creado por **Jaime Inchaurraga** con n8n + Streamlit + OpenAI")
 
 # ===========================
 # 🔑 CARGAR VARIABLES DE ENTORNO
 # ===========================
-# Carga desde app/config/secrets.env si existe
 env_path = Path("app/config/secrets.env")
 if env_path.exists():
     load_dotenv(env_path)
 
-# Carga variables (prioridad: entorno > .env > Streamlit Cloud)
-OPENAI_API_KEY = (
-    os.getenv("OPENAI_API_KEY")
-    or st.secrets.get("OPENAI_API_KEY", None)
-)
-N8N_WEBHOOK_URL = (
-    os.getenv("N8N_WEBHOOK_URL")
-    or st.secrets.get("N8N_WEBHOOK_URL", None)
-)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", None)
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL") or st.secrets.get("N8N_WEBHOOK_URL", None)
 AUTH_KEY = os.getenv("JAIBOT_AUTH_KEY", "clave_jaibot")
-
-st.write("🔗 Webhook activo:", N8N_WEBHOOK_URL)
-
-# ===========================
-# 🌐 FUNCIÓN PARA DETECTAR O CREAR TÚNEL CLOUDFLARE
-# ===========================
-def get_or_create_tunnel_url():
-    """
-    Detecta si hay un túnel Cloudflare activo o lanza uno nuevo.
-    Devuelve la URL pública (https://xxx.trycloudflare.com).
-    """
-    tunnel_file = Path("tunnel_url.txt")
-
-    # Usa el túnel existente si está disponible
-    if tunnel_file.exists():
-        url = tunnel_file.read_text().strip()
-        if url.startswith("https://"):
-            return url
-
-    # Si no existe, intenta crear uno
-    try:
-        result = subprocess.run(
-            ["cloudflared", "tunnel", "--url", "http://127.0.0.1:5678", "--no-autoupdate"],
-            capture_output=True,
-            text=True,
-            timeout=15
-        )
-        for line in result.stdout.splitlines():
-            if "trycloudflare.com" in line:
-                url = line.split(" ")[-1].strip()
-                tunnel_file.write_text(url)
-                return url
-    except Exception as e:
-        st.warning(f"No se pudo crear el túnel automáticamente: {e}")
-
-    return None
-
-# ===========================
-# 🌍 DEFINIR LA URL FINAL DEL WEBHOOK
-# ===========================
-# if not N8N_WEBHOOK_URL:
-#     tunnel_url = get_or_create_tunnel_url()
-#     if tunnel_url:
-#         N8N_WEBHOOK_URL = f"{tunnel_url}/webhook-test/jaibot_router"
-#         st.info(f"🌍 Usando túnel activo: {N8N_WEBHOOK_URL}")
-#     else:
-#         N8N_WEBHOOK_URL = "http://127.0.0.1:5678/webhook-test/jaibot_router"
-#         st.warning("⚠️ No se detectó túnel activo, usando entorno local.")
-
-N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
-st.info(f"🌍 Usando Webhook: {N8N_WEBHOOK_URL}")
 
 # ===========================
 # 💾 ESTADO DE SESIÓN
 # ===========================
 if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []  # [(role, message)]
+    st.session_state.chat_history = []
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if "is_jaime" not in st.session_state:
+    st.session_state.is_jaime = False
 
 # ===========================
-# 💬 MOSTRAR HISTORIAL
+# 🚪 FASE DE IDENTIFICACIÓN
+# ===========================
+if not st.session_state.authenticated:
+    st.subheader("👋 Antes de empezar...")
+    user_type = st.radio(
+        "¿Eres Jaime o un visitante?",
+        ["Visitante", "Soy Jaime"],
+        horizontal=True
+    )
+
+    if user_type == "Soy Jaime":
+        password = st.text_input("Introduce tu clave secreta:", type="password")
+        if password == "clave_jaibot":  # Clave de ejemplo
+            st.session_state.authenticated = True
+            st.session_state.is_jaime = True
+            st.success("✅ Autenticado como Jaime")
+        elif password:
+            st.error("❌ Clave incorrecta")
+    else:
+        st.session_state.authenticated = True
+        st.session_state.is_jaime = False
+        st.info("🔹 Modo visitante activado")
+
+    st.stop()
+
+# ===========================
+# 💬 MOSTRAR HISTORIAL DE CHAT
 # ===========================
 for role, text in st.session_state.chat_history:
     if role == "user":
-        st.markdown(f"🧑 **Tú:** {text}")
+        st.markdown(f"<div class='chat-bubble-user'>🧑 <b>Tú:</b> {text}</div>", unsafe_allow_html=True)
     else:
-        st.markdown(f"🤖 **JAIBOT:** {text}")
+        st.markdown(f"<div class='chat-bubble-bot'>🤖 <b>JAIBOT:</b> {text}</div>", unsafe_allow_html=True)
+
+# ===========================
+# ✍️ PROMPTS PREDEFINIDOS (DEMO)
+# ===========================
+st.markdown("### 💬 Preguntas sugeridas (modo demo)")
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("📅 ¿Cuántos años de experiencia tiene Jaime?"):
+        st.session_state.input_area = "¿Cuántos años de experiencia tiene Jaime?"
+with col2:
+    if st.button("💡 ¿Qué aficiones tiene Jaime?"):
+        st.session_state.input_area = "¿Qué aficiones tiene Jaime?"
+with col3:
+    if st.button("📊 ¿En qué proyectos ha trabajado?"):
+        st.session_state.input_area = "¿En qué proyectos ha trabajado Jaime?"
 
 # ===========================
 # ✍️ ENTRADA DEL USUARIO
 # ===========================
 user_message = st.text_area(
     "Tu mensaje:",
-    placeholder="Ejemplo: crea un evento mañana a las 10",
+    placeholder="Ejemplo: ¿Qué hace JAIBOT LITE?",
     key="input_area"
 )
 
@@ -125,9 +139,14 @@ if clear_btn:
 # ===========================
 if send_btn and user_message.strip():
     try:
+        # Mensaje inicial si es Jaime
+        prefix = ""
+        if st.session_state.is_jaime:
+            prefix = "(Soy Jaime, así que puedes usar modo personal) "
+
         payload = {
             "auth_key": AUTH_KEY,
-            "message": user_message,
+            "message": prefix + user_message,
             "context": [
                 {"role": role, "content": text}
                 for role, text in st.session_state.chat_history[-5:]
@@ -152,3 +171,21 @@ if send_btn and user_message.strip():
 
     except Exception as e:
         st.error(f"⚠️ Error al conectar con n8n: {e}")
+
+# ===========================
+# 🧠 SECCIÓN EXPLICATIVA
+# ===========================
+with st.expander("🧩 ¿Quieres saber cómo funciona JAIBOT LITE?"):
+    st.markdown("""
+    JAIBOT LITE es una demo interactiva creada por **Jaime Inchaurraga**.
+
+    Combina:
+    - 🧠 **OpenAI** como motor de lenguaje
+    - ⚙️ **n8n** para la lógica y orquestación
+    - 🌐 **Streamlit** como interfaz visual
+    - ☁️ **Cloudflare Tunnel** para exponer el backend local
+
+    El flujo permite enviar mensajes desde la interfaz, procesarlos en n8n
+    y devolver respuestas inteligentes o ejecutar acciones automatizadas.
+    """)
+    st.image("app/assets/arquitectura_jaibot.png", caption="Arquitectura del sistema")
