@@ -32,6 +32,8 @@ N8N_WEBHOOK_URL = (
 )
 AUTH_KEY = os.getenv("JAIBOT_AUTH_KEY", "clave_jaibot")
 
+st.write("🔗 Webhook activo:", N8N_WEBHOOK_URL)
+
 # ===========================
 # 🌐 FUNCIÓN PARA DETECTAR O CREAR TÚNEL CLOUDFLARE
 # ===========================
