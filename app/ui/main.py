@@ -40,44 +40,6 @@ AUTH_KEY = os.getenv("JAIBOT_AUTH_KEY", "clave_jaibot")
 # ===========================
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-if "is_jaime" not in st.session_state:
-    st.session_state.is_jaime = False
-
-# ===========================
-# 🚪 FASE DE IDENTIFICACIÓN (con rerender)
-# ===========================
-if not st.session_state.authenticated:
-    st.subheader("👋 Antes de empezar...")
-    user_type = st.radio(
-        "¿Eres Jaime o un visitante?",
-        ["Visitante", "Soy Jaime"],
-        horizontal=True
-    )
-
-    if user_type == "Soy Jaime":
-        password = st.text_input("Introduce tu clave secreta:", type="password")
-        if password == "clave_jaibot":  # <-- cámbiala si quieres
-            st.session_state.authenticated = True
-            st.session_state.is_jaime = True
-            st.success("✅ Autenticado como Jaime")
-            try:
-                st.rerun()
-            except Exception:
-                st.experimental_rerun()
-        elif password:
-            st.error("❌ Clave incorrecta")
-    else:
-        st.session_state.authenticated = True
-        st.session_state.is_jaime = False
-        st.info("🔹 Modo visitante activado")
-        try:
-            st.rerun()
-        except Exception:
-            st.experimental_rerun()
-
-    st.stop()
 
 # ===========================
 # 💬 HISTORIAL
@@ -123,10 +85,7 @@ with c2:
 # ===========================
 if clear_btn:
     st.session_state.chat_history = []
-    try:
-        st.rerun()
-    except Exception:
-        st.experimental_rerun()
+    st.experimental_rerun()
 
 # ===========================
 # 🚀 ENVIAR A N8N
@@ -136,7 +95,6 @@ if send_btn and user_message.strip():
         payload = {
             "auth_key": AUTH_KEY,
             "message": user_message,
-            "mode": "jaime" if st.session_state.is_jaime else "visitor",
             "context": [
                 {"role": role, "content": text}
                 for role, text in st.session_state.chat_history[-5:]
@@ -155,10 +113,7 @@ if send_btn and user_message.strip():
             reply = data.get("reply", "⚠️ Sin respuesta del asistente.")
             st.session_state.chat_history.append(("user", user_message))
             st.session_state.chat_history.append(("assistant", reply))
-            try:
-                st.rerun()
-            except Exception:
-                st.experimental_rerun()
+            st.experimental_rerun()
         else:
             st.error(f"❌ Error {response.status_code}: {response.text}")
 
