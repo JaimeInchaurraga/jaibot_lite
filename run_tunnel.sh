@@ -5,7 +5,7 @@ cloudflared tunnel --url http://127.0.0.1:5678 --no-autoupdate 2>&1 | tee ~/Docu
 do
     if [[ $line == *"trycloudflare.com"* ]]; then
         URL=$(echo $line | grep -o 'https://[^ ]*trycloudflare.com')
-        echo $URL > ~/Documents/Github_25/jai_assistant/tunnel_url.txt
+        echo $URL > ~/Documents/Github_25/jaibot_lite/tunnel_url.txt
         echo "🌐 URL del túnel: $URL"
         echo $URL | pbcopy
         echo "📋 Copiada al portapapeles ✅"

@@ -69,14 +69,17 @@ def get_or_create_tunnel_url():
 # ===========================
 # 🌍 DEFINIR LA URL FINAL DEL WEBHOOK
 # ===========================
-if not N8N_WEBHOOK_URL:
-    tunnel_url = get_or_create_tunnel_url()
-    if tunnel_url:
-        N8N_WEBHOOK_URL = f"{tunnel_url}/webhook-test/jaibot_router"
-        st.info(f"🌍 Usando túnel activo: {N8N_WEBHOOK_URL}")
-    else:
-        N8N_WEBHOOK_URL = "http://127.0.0.1:5678/webhook-test/jaibot_router"
-        st.warning("⚠️ No se detectó túnel activo, usando entorno local.")
+# if not N8N_WEBHOOK_URL:
+#     tunnel_url = get_or_create_tunnel_url()
+#     if tunnel_url:
+#         N8N_WEBHOOK_URL = f"{tunnel_url}/webhook-test/jaibot_router"
+#         st.info(f"🌍 Usando túnel activo: {N8N_WEBHOOK_URL}")
+#     else:
+#         N8N_WEBHOOK_URL = "http://127.0.0.1:5678/webhook-test/jaibot_router"
+#         st.warning("⚠️ No se detectó túnel activo, usando entorno local.")
+
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
+st.info(f"🌍 Usando Webhook: {N8N_WEBHOOK_URL}")
 
 # ===========================
 # 💾 ESTADO DE SESIÓN
