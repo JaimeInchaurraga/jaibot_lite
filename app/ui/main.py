@@ -55,10 +55,8 @@ AUTH_KEY = os.getenv("JAIBOT_AUTH_KEY", "clave_jaibot")
 # ===========================
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
-
 if "is_jaime" not in st.session_state:
     st.session_state.is_jaime = False
 
@@ -75,7 +73,7 @@ if not st.session_state.authenticated:
 
     if user_type == "Soy Jaime":
         password = st.text_input("Introduce tu clave secreta:", type="password")
-        if password == "clave_jaibot":  # Clave de ejemplo
+        if password == "clave_jaibot":  # Clave temporal
             st.session_state.authenticated = True
             st.session_state.is_jaime = True
             st.success("✅ Autenticado como Jaime")
@@ -102,15 +100,12 @@ for role, text in st.session_state.chat_history:
 # ===========================
 st.markdown("### 💬 Preguntas sugeridas (modo demo)")
 col1, col2, col3 = st.columns(3)
-with col1:
-    if st.button("📅 ¿Cuántos años de experiencia tiene Jaime?"):
-        st.session_state.input_area = "¿Cuántos años de experiencia tiene Jaime?"
-with col2:
-    if st.button("💡 ¿Qué aficiones tiene Jaime?"):
-        st.session_state.input_area = "¿Qué aficiones tiene Jaime?"
-with col3:
-    if st.button("📊 ¿En qué proyectos ha trabajado?"):
-        st.session_state.input_area = "¿En qué proyectos ha trabajado Jaime?"
+if col1.button("📅 ¿Cuántos años de experiencia tiene Jaime?"):
+    st.session_state.input_area = "¿Cuántos años de experiencia tiene Jaime?"
+if col2.button("💡 ¿Qué aficiones tiene Jaime?"):
+    st.session_state.input_area = "¿Qué aficiones tiene Jaime?"
+if col3.button("📊 ¿En qué proyectos ha trabajado Jaime?"):
+    st.session_state.input_area = "¿En qué proyectos ha trabajado Jaime?"
 
 # ===========================
 # ✍️ ENTRADA DEL USUARIO
@@ -139,10 +134,11 @@ if clear_btn:
 # ===========================
 if send_btn and user_message.strip():
     try:
-        # Mensaje inicial si es Jaime
         prefix = ""
         if st.session_state.is_jaime:
-            prefix = "(Soy Jaime, así que puedes usar modo personal) "
+            prefix = "(Soy Jaime, puedes hablarme en modo personal) "
+        else:
+            prefix = "(Usuario visitante, responde de forma informativa sobre Jaime) "
 
         payload = {
             "auth_key": AUTH_KEY,
@@ -180,12 +176,17 @@ with st.expander("🧩 ¿Quieres saber cómo funciona JAIBOT LITE?"):
     JAIBOT LITE es una demo interactiva creada por **Jaime Inchaurraga**.
 
     Combina:
-    - 🧠 **OpenAI** como motor de lenguaje
-    - ⚙️ **n8n** para la lógica y orquestación
-    - 🌐 **Streamlit** como interfaz visual
-    - ☁️ **Cloudflare Tunnel** para exponer el backend local
+    - 🧠 **OpenAI** como motor de lenguaje  
+    - ⚙️ **n8n** para la lógica y orquestación  
+    - 🌐 **Streamlit** como interfaz visual  
+    - ☁️ **Cloudflare Tunnel** para exponer el backend local  
 
     El flujo permite enviar mensajes desde la interfaz, procesarlos en n8n
     y devolver respuestas inteligentes o ejecutar acciones automatizadas.
     """)
-    st.image("app/assets/arquitectura_jaibot.png", caption="Arquitectura del sistema")
+
+    img_path = Path("app/assets/arquitectura_jaibot.png")
+    if img_path.exists():
+        st.image(str(img_path), caption="Arquitectura del sistema")
+    else:
+        st.info("🖼️ Diagrama de arquitectura no disponible en este entorno.")
