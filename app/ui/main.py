@@ -3,7 +3,6 @@ import requests
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-import subprocess
 
 # ===========================
 # ⚙️ CONFIGURACIÓN INICIAL
@@ -15,24 +14,10 @@ st.set_page_config(page_title="JAIBOT LITE", page_icon="🤖", layout="centered"
 # ===========================
 st.markdown("""
 <style>
-body {
-    background: linear-gradient(180deg, #f8f9fc 0%, #eef1f8 100%);
-    font-family: 'Inter', sans-serif;
-}
-.chat-bubble-user {
-    background-color: #e8f0fe;
-    padding: 0.6rem 1rem;
-    border-radius: 1rem;
-    margin-bottom: 0.4rem;
-    max-width: 85%;
-}
-.chat-bubble-bot {
-    background-color: #f1f3f4;
-    padding: 0.6rem 1rem;
-    border-radius: 1rem;
-    margin-bottom: 0.4rem;
-    max-width: 85%;
-}
+body { background: linear-gradient(180deg, #f8f9fc 0%, #eef1f8 100%); font-family: 'Inter', sans-serif; }
+.chat-bubble-user { background-color: #e8f0fe; padding: 0.6rem 1rem; border-radius: 1rem; margin-bottom: 0.4rem; max-width: 85%; }
+.chat-bubble-bot  { background-color: #f1f3f4; padding: 0.6rem 1rem; border-radius: 1rem; margin-bottom: 0.4rem; max-width: 85%; }
+.demo-chip button { width:100%; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -61,7 +46,7 @@ if "is_jaime" not in st.session_state:
     st.session_state.is_jaime = False
 
 # ===========================
-# 🚪 FASE DE IDENTIFICACIÓN
+# 🚪 FASE DE IDENTIFICACIÓN (con rerender)
 # ===========================
 if not st.session_state.authenticated:
     st.subheader("👋 Antes de empezar...")
@@ -73,21 +58,29 @@ if not st.session_state.authenticated:
 
     if user_type == "Soy Jaime":
         password = st.text_input("Introduce tu clave secreta:", type="password")
-        if password == "clave_jaibot":  # Clave temporal
+        if password == "clave_jaibot":  # <-- cámbiala si quieres
             st.session_state.authenticated = True
             st.session_state.is_jaime = True
             st.success("✅ Autenticado como Jaime")
+            try:
+                st.rerun()
+            except Exception:
+                st.experimental_rerun()
         elif password:
             st.error("❌ Clave incorrecta")
     else:
         st.session_state.authenticated = True
         st.session_state.is_jaime = False
         st.info("🔹 Modo visitante activado")
+        try:
+            st.rerun()
+        except Exception:
+            st.experimental_rerun()
 
     st.stop()
 
 # ===========================
-# 💬 MOSTRAR HISTORIAL DE CHAT
+# 💬 HISTORIAL
 # ===========================
 for role, text in st.session_state.chat_history:
     if role == "user":
@@ -96,19 +89,22 @@ for role, text in st.session_state.chat_history:
         st.markdown(f"<div class='chat-bubble-bot'>🤖 <b>JAIBOT:</b> {text}</div>", unsafe_allow_html=True)
 
 # ===========================
-# ✍️ PROMPTS PREDEFINIDOS (DEMO)
+# 💡 PROMPTS DEMO
 # ===========================
 st.markdown("### 💬 Preguntas sugeridas (modo demo)")
-col1, col2, col3 = st.columns(3)
-if col1.button("📅 ¿Cuántos años de experiencia tiene Jaime?"):
-    st.session_state.input_area = "¿Cuántos años de experiencia tiene Jaime?"
-if col2.button("💡 ¿Qué aficiones tiene Jaime?"):
-    st.session_state.input_area = "¿Qué aficiones tiene Jaime?"
-if col3.button("📊 ¿En qué proyectos ha trabajado Jaime?"):
-    st.session_state.input_area = "¿En qué proyectos ha trabajado Jaime?"
+c1, c2, c3 = st.columns(3, gap="small")
+with c1:
+    if st.button("📅 ¿Cuántos años de experiencia tiene Jaime?", use_container_width=True):
+        st.session_state.input_area = "¿Cuántos años de experiencia tiene Jaime?"
+with c2:
+    if st.button("💡 ¿Qué aficiones tiene Jaime?", use_container_width=True):
+        st.session_state.input_area = "¿Qué aficiones tiene Jaime?"
+with c3:
+    if st.button("📊 ¿En qué proyectos ha trabajado Jaime?", use_container_width=True):
+        st.session_state.input_area = "¿En qué proyectos ha trabajado Jaime?"
 
 # ===========================
-# ✍️ ENTRADA DEL USUARIO
+# ✍️ INPUT
 # ===========================
 user_message = st.text_area(
     "Tu mensaje:",
@@ -116,33 +112,31 @@ user_message = st.text_area(
     key="input_area"
 )
 
-col1, col2 = st.columns([1, 1])
-with col1:
+c1, c2 = st.columns([1, 1])
+with c1:
     send_btn = st.button("Enviar", type="primary")
-with col2:
+with c2:
     clear_btn = st.button("🧹 Nueva conversación")
 
 # ===========================
-# 🧹 LIMPIAR CHAT
+# 🧹 LIMPIAR
 # ===========================
 if clear_btn:
     st.session_state.chat_history = []
-    st.experimental_rerun()
+    try:
+        st.rerun()
+    except Exception:
+        st.experimental_rerun()
 
 # ===========================
-# 🚀 PROCESAR MENSAJE
+# 🚀 ENVIAR A N8N
 # ===========================
 if send_btn and user_message.strip():
     try:
-        prefix = ""
-        if st.session_state.is_jaime:
-            prefix = "(Soy Jaime, puedes hablarme en modo personal) "
-        else:
-            prefix = "(Usuario visitante, responde de forma informativa sobre Jaime) "
-
         payload = {
             "auth_key": AUTH_KEY,
-            "message": prefix + user_message,
+            "message": user_message,
+            "mode": "jaime" if st.session_state.is_jaime else "visitor",
             "context": [
                 {"role": role, "content": text}
                 for role, text in st.session_state.chat_history[-5:]
@@ -161,7 +155,10 @@ if send_btn and user_message.strip():
             reply = data.get("reply", "⚠️ Sin respuesta del asistente.")
             st.session_state.chat_history.append(("user", user_message))
             st.session_state.chat_history.append(("assistant", reply))
-            st.experimental_rerun()
+            try:
+                st.rerun()
+            except Exception:
+                st.experimental_rerun()
         else:
             st.error(f"❌ Error {response.status_code}: {response.text}")
 
@@ -169,7 +166,7 @@ if send_btn and user_message.strip():
         st.error(f"⚠️ Error al conectar con n8n: {e}")
 
 # ===========================
-# 🧠 SECCIÓN EXPLICATIVA
+# 🧠 EXPLICATIVO (imagen protegida)
 # ===========================
 with st.expander("🧩 ¿Quieres saber cómo funciona JAIBOT LITE?"):
     st.markdown("""
