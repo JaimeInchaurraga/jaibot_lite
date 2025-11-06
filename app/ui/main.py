@@ -23,7 +23,7 @@ body { background: linear-gradient(180deg, #f8f9fc 0%, #eef1f8 100%); font-famil
 """, unsafe_allow_html=True)
 
 st.title("🤖 JAIBOT LITE — Demo Interactiva")
-st.caption("🧩 Versión interfaz: 2025-11-06-v4 (depuración limpieza corchetes)")  # 🔍 MARCA DE VERSIÓN VISIBLE
+st.caption("🧩 Versión interfaz: 2025-11-06-v5 (doble limpieza: guardado + render)")
 st.caption("Un asistente creado por **Jaime Inchaurraga** con n8n + Streamlit + OpenAI")
 
 # ===========================
@@ -38,19 +38,61 @@ N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL") or st.secrets.get("N8N_WEBHOOK_UR
 AUTH_KEY = os.getenv("JAIBOT_AUTH_KEY", "clave_jaibot")
 
 # ===========================
+# 🧽 FUNCIÓN LIMPIEZA DE RESPUESTA
+# ===========================
+def clean_reply(text: str) -> str:
+    """
+    Elimina cualquier bloque [ ... ] (incluidos los de tipo [4:archivo.txt]),
+    normaliza espacios/puntuación y corrige corchetes raros Unicode.
+    Se aplica tanto al guardar como al renderizar (doble capa).
+    """
+    if not text:
+        return text
+
+    import unicodedata
+
+    # Normaliza invisibles / NBSP / BOM
+    text = unicodedata.normalize("NFKD", text)
+    text = text.replace("\u200b", "").replace("\ufeff", "").replace("\xa0", " ")
+
+    # Corchetes raros → normales
+    text = text.replace("［", "[").replace("］", "]")
+
+    # 🔥 Quita cualquier [ ... ] (todas las apariciones)
+    # Repetimos por si el modelo anida “] texto [” (defensivo)
+    while re.search(r"\[[^\]]*\]", text):
+        text = re.sub(r"\[[^\]]*\]", "", text)
+
+    # Limpia espacios/puntuación resultante
+    text = re.sub(r"\s+", " ", text)        # espacios repetidos
+    text = re.sub(r"\s+\.", ".", text)      # espacio antes de punto
+    text = re.sub(r"\s+,", ",", text)       # espacio antes de coma
+    text = text.strip()
+
+    return text
+
+# ===========================
 # 💾 ESTADO DE SESIÓN
 # ===========================
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # ===========================
-# 💬 HISTORIAL
+# 💬 HISTORIAL (RENDER)
+# * Doble capa: si por lo que sea se guardó sucio, aquí se limpia al pintar.
 # ===========================
 for role, text in st.session_state.chat_history:
     if role == "user":
-        st.markdown(f"<div class='chat-bubble-user'>🧑 <b>Tú:</b> {text}</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='chat-bubble-user'>🧑 <b>Tú:</b> {text}</div>",
+            unsafe_allow_html=True
+        )
     else:
-        st.markdown(f"<div class='chat-bubble-bot'>🤖 <b>JAIBOT:</b> {text}</div>", unsafe_allow_html=True)
+        safe_text = clean_reply(text)  # 👈 limpieza en render
+        st.markdown(
+            f"<div class='chat-bubble-bot'>🤖 <b>JAIBOT:</b> {safe_text}</div>",
+            unsafe_allow_html=True
+        )
 
 # ===========================
 # 💡 PROMPTS DEMO
@@ -90,37 +132,6 @@ if clear_btn:
     st.experimental_rerun()
 
 # ===========================
-# 🧽 FUNCIÓN LIMPIEZA DE RESPUESTA
-# ===========================
-def clean_reply(text: str) -> str:
-    """
-    Elimina cualquier bloque [ ... ] sin excepción, incluso con caracteres invisibles.
-    Esta función se ejecuta solo sobre la respuesta del asistente, sin alterar el payload.
-    """
-    if not text:
-        return text
-
-    import unicodedata
-
-    # Normaliza caracteres invisibles / Unicode raros
-    text = unicodedata.normalize("NFKD", text)
-    text = text.replace("\u200b", "").replace("\ufeff", "").replace("\xa0", " ")
-
-    # Sustituye corchetes especiales por normales
-    text = text.replace("［", "[").replace("］", "]")
-
-    # 🔥 Elimina CUALQUIER bloque que empiece con "[" y acabe con "]"
-    text = re.sub(r"\[[^\]]*\]", "", text)
-
-    # Limpieza de espacios y puntuación
-    text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"\s+\.", ".", text)
-    text = re.sub(r"\s+,", ",", text)
-
-    # 🧹 Marca temporal para confirmar que la limpieza se aplica
-    return "🧹" + text.strip()
-
-# ===========================
 # 🚀 ENVIAR A N8N
 # ===========================
 if send_btn and user_message.strip():
@@ -144,17 +155,11 @@ if send_btn and user_message.strip():
         if response.status_code == 200:
             data = response.json()
             reply_raw = data.get("reply", "⚠️ Sin respuesta del asistente.")
+            reply_clean = clean_reply(reply_raw)  # 👈 limpieza al guardar
 
-            print("=== REPLY RAW ===")
-            print(repr(reply_raw))
-
-            reply = clean_reply(reply_raw)  # 💬 APLICAR LIMPIEZA
-
-            print("=== REPLY CLEANED ===")
-            print(repr(reply))
-
+            # Guardamos ya limpio
             st.session_state.chat_history.append(("user", user_message))
-            st.session_state.chat_history.append(("assistant", reply))
+            st.session_state.chat_history.append(("assistant", reply_clean))
             st.experimental_rerun()
         else:
             st.error(f"❌ Error {response.status_code}: {response.text}")
