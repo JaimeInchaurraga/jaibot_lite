@@ -92,14 +92,19 @@ if clear_btn:
 # 🧽 LIMPIEZA DE RESPUESTA
 # ===========================
 def clean_reply(text: str) -> str:
-    """Elimina referencias tipo [4:1contexto_...] y saltos de línea extra."""
+    """Limpia referencias [x:y...] o [..contexto_...] y deja el texto legible."""
     if not text:
         return text
-    text = re.sub(r"\[\d+:[^\]]+\]", "", text)
-    text = re.sub(r"\[[^\]]*contexto_[^\]]*\]", "", text, flags=re.I)
+
+    # Elimina cualquier cosa entre corchetes que contenga dígitos, 'contexto', 'txt', 'pdf', etc.
+    text = re.sub(r"\[[^\]]*(\d+|contexto|\.txt|\.pdf)[^\]]*\]", "", text, flags=re.IGNORECASE)
+
+    # Compacta saltos y espacios extra
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"\s+\.", ".", text)
+
     return text.strip()
+
 
 # ===========================
 # 🚀 ENVIAR A N8N
