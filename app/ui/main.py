@@ -23,6 +23,7 @@ body { background: linear-gradient(180deg, #f8f9fc 0%, #eef1f8 100%); font-famil
 """, unsafe_allow_html=True)
 
 st.title("🤖 JAIBOT LITE — Demo Interactiva")
+st.caption("🧩 Versión interfaz: 2025-11-06-v4 (depuración limpieza corchetes)")  # 🔍 MARCA DE VERSIÓN VISIBLE
 st.caption("Un asistente creado por **Jaime Inchaurraga** con n8n + Streamlit + OpenAI")
 
 # ===========================
@@ -82,21 +83,23 @@ with c2:
     clear_btn = st.button("🧹 Nueva conversación")
 
 # ===========================
-# 🧹 LIMPIAR
+# 🧹 LIMPIAR HISTORIAL
 # ===========================
 if clear_btn:
     st.session_state.chat_history = []
     st.experimental_rerun()
 
 # ===========================
-# 🧽 LIMPIEZA DE RESPUESTA ---> la API trae en corchetes los docs que usa de contexto en la respuesta --> hay que quitarlos
+# 🧽 FUNCIÓN LIMPIEZA DE RESPUESTA
 # ===========================
 def clean_reply(text: str) -> str:
-    """Elimina cualquier bloque [ ... ] sin excepción, incluso con caracteres invisibles."""
+    """
+    Elimina cualquier bloque [ ... ] sin excepción, incluso con caracteres invisibles.
+    Esta función se ejecuta solo sobre la respuesta del asistente, sin alterar el payload.
+    """
     if not text:
         return text
 
-    import re
     import unicodedata
 
     # Normaliza caracteres invisibles / Unicode raros
@@ -114,11 +117,8 @@ def clean_reply(text: str) -> str:
     text = re.sub(r"\s+\.", ".", text)
     text = re.sub(r"\s+,", ",", text)
 
-    return text.strip()
-
-
-
-
+    # 🧹 Marca temporal para confirmar que la limpieza se aplica
+    return "🧹" + text.strip()
 
 # ===========================
 # 🚀 ENVIAR A N8N
@@ -144,7 +144,15 @@ if send_btn and user_message.strip():
         if response.status_code == 200:
             data = response.json()
             reply_raw = data.get("reply", "⚠️ Sin respuesta del asistente.")
+
+            print("=== REPLY RAW ===")
+            print(repr(reply_raw))
+
             reply = clean_reply(reply_raw)  # 💬 APLICAR LIMPIEZA
+
+            print("=== REPLY CLEANED ===")
+            print(repr(reply))
+
             st.session_state.chat_history.append(("user", user_message))
             st.session_state.chat_history.append(("assistant", reply))
             st.experimental_rerun()
