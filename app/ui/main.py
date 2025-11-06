@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import os
+import re  # 🧽 LIMPIEZA
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -88,6 +89,19 @@ if clear_btn:
     st.experimental_rerun()
 
 # ===========================
+# 🧽 LIMPIEZA DE RESPUESTA
+# ===========================
+def clean_reply(text: str) -> str:
+    """Elimina referencias tipo [4:1contexto_...] y saltos de línea extra."""
+    if not text:
+        return text
+    text = re.sub(r"\[\d+:[^\]]+\]", "", text)
+    text = re.sub(r"\[[^\]]*contexto_[^\]]*\]", "", text, flags=re.I)
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\s+\.", ".", text)
+    return text.strip()
+
+# ===========================
 # 🚀 ENVIAR A N8N
 # ===========================
 if send_btn and user_message.strip():
@@ -110,7 +124,8 @@ if send_btn and user_message.strip():
 
         if response.status_code == 200:
             data = response.json()
-            reply = data.get("reply", "⚠️ Sin respuesta del asistente.")
+            reply_raw = data.get("reply", "⚠️ Sin respuesta del asistente.")
+            reply = clean_reply(reply_raw)  # 💬 APLICAR LIMPIEZA
             st.session_state.chat_history.append(("user", user_message))
             st.session_state.chat_history.append(("assistant", reply))
             st.experimental_rerun()
