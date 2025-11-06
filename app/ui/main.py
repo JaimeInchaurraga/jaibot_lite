@@ -89,34 +89,33 @@ if clear_btn:
     st.experimental_rerun()
 
 # ===========================
-# 🧽 LIMPIEZA DE RESPUESTA
+# 🧽 LIMPIEZA DE RESPUESTA ---> la API trae en corchetes los docs que usa de contexto en la respuesta --> hay que quitarlos
 # ===========================
 def clean_reply(text: str) -> str:
-    """Limpia completamente las referencias [4:...], incluso si los corchetes son Unicode o invisibles."""
+    """Elimina cualquier bloque [ ... ] sin excepción, incluso con caracteres invisibles."""
     if not text:
         return text
 
+    import re
     import unicodedata
 
-    # Normaliza cualquier carácter raro de espacio o símbolo invisible
+    # Normaliza caracteres invisibles / Unicode raros
     text = unicodedata.normalize("NFKD", text)
     text = text.replace("\u200b", "").replace("\ufeff", "").replace("\xa0", " ")
 
-    # Sustituye corchetes Unicode o invisibles por corchetes normales
+    # Sustituye corchetes especiales por normales
     text = text.replace("［", "[").replace("］", "]")
 
-    # Aplasta saltos y espacios
-    text = text.replace("\n", " ").replace("\r", " ")
+    # 🔥 Elimina CUALQUIER bloque que empiece con "[" y acabe con "]"
+    text = re.sub(r"\[[^\]]*\]", "", text)
 
-    # Elimina cualquier cosa entre corchetes que contenga dígitos, 'contexto', '.txt', '.pdf', etc.
-    text = re.sub(r"\[[^\]]*(\d+:|contexto|\.txt|\.pdf)[^\]]*\]", "", text, flags=re.IGNORECASE)
-
-    # Vuelve a limpiar espacios duplicados o mal colocados
+    # Limpieza de espacios y puntuación
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"\s+\.", ".", text)
     text = re.sub(r"\s+,", ",", text)
 
     return text.strip()
+
 
 
 
