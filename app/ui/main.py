@@ -1,9 +1,10 @@
 import streamlit as st
 import requests
 import os
-import re  # 🧽 LIMPIEZA
+import re
 from dotenv import load_dotenv
 from pathlib import Path
+import html  # 👈 para escapar texto
 
 # ===========================
 # ⚙️ CONFIGURACIÓN INICIAL
@@ -17,13 +18,13 @@ st.markdown("""
 <style>
 body { background: linear-gradient(180deg, #f8f9fc 0%, #eef1f8 100%); font-family: 'Inter', sans-serif; }
 .chat-bubble-user { background-color: #e8f0fe; padding: 0.6rem 1rem; border-radius: 1rem; margin-bottom: 0.4rem; max-width: 85%; }
-.chat-bubble-bot  { background-color: #f1f3f4; padding: 0.6rem 1rem; border-radius: 1rem; margin-bottom: 0.4rem; max-width: 85%; }
+.chat-bubble-bot  { background-color: #f1f3f4; padding: 0.6rem 1rem; border-radius: 1rem; margin-bottom: 0.4rem; max-width: 85%; white-space: pre-wrap; }
 .demo-chip button { width:100%; }
 </style>
 """, unsafe_allow_html=True)
 
 st.title("🤖 JAIBOT LITE — Demo Interactiva")
-st.caption("🧩 Versión interfaz: 2025-11-06-v5 (doble limpieza: guardado + render)")
+st.caption("🧩 Versión interfaz: 2025-11-06-v6 (render seguro + limpieza definitiva)")
 st.caption("Un asistente creado por **Jaime Inchaurraga** con n8n + Streamlit + OpenAI")
 
 # ===========================
@@ -38,37 +39,19 @@ N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL") or st.secrets.get("N8N_WEBHOOK_UR
 AUTH_KEY = os.getenv("JAIBOT_AUTH_KEY", "clave_jaibot")
 
 # ===========================
-# 🧽 FUNCIÓN LIMPIEZA DE RESPUESTA
+# 🧽 FUNCIÓN LIMPIEZA
 # ===========================
 def clean_reply(text: str) -> str:
-    """
-    Elimina cualquier bloque [ ... ] (incluidos los de tipo [4:archivo.txt]),
-    normaliza espacios/puntuación y corrige corchetes raros Unicode.
-    Se aplica tanto al guardar como al renderizar (doble capa).
-    """
+    """Limpia corchetes, caracteres invisibles y normaliza texto."""
     if not text:
         return text
-
     import unicodedata
-
-    # Normaliza invisibles / NBSP / BOM
     text = unicodedata.normalize("NFKD", text)
     text = text.replace("\u200b", "").replace("\ufeff", "").replace("\xa0", " ")
-
-    # Corchetes raros → normales
     text = text.replace("［", "[").replace("］", "]")
-
-    # 🔥 Quita cualquier [ ... ] (todas las apariciones)
-    # Repetimos por si el modelo anida “] texto [” (defensivo)
     while re.search(r"\[[^\]]*\]", text):
         text = re.sub(r"\[[^\]]*\]", "", text)
-
-    # Limpia espacios/puntuación resultante
-    text = re.sub(r"\s+", " ", text)        # espacios repetidos
-    text = re.sub(r"\s+\.", ".", text)      # espacio antes de punto
-    text = re.sub(r"\s+,", ",", text)       # espacio antes de coma
-    text = text.strip()
-
+    text = re.sub(r"\s+", " ", text).strip()
     return text
 
 # ===========================
@@ -79,20 +62,14 @@ if "chat_history" not in st.session_state:
 
 # ===========================
 # 💬 HISTORIAL (RENDER)
-# * Doble capa: si por lo que sea se guardó sucio, aquí se limpia al pintar.
 # ===========================
 for role, text in st.session_state.chat_history:
     if role == "user":
-        st.markdown(
-            f"<div class='chat-bubble-user'>🧑 <b>Tú:</b> {text}</div>",
-            unsafe_allow_html=True
-        )
+        safe_text = html.escape(text)
+        st.markdown(f"<div class='chat-bubble-user'>🧑 <b>Tú:</b> {safe_text}</div>", unsafe_allow_html=True)
     else:
-        safe_text = clean_reply(text)  # 👈 limpieza en render
-        st.markdown(
-            f"<div class='chat-bubble-bot'>🤖 <b>JAIBOT:</b> {safe_text}</div>",
-            unsafe_allow_html=True
-        )
+        safe_text = html.escape(clean_reply(text))  # 👈 evita interpretación de markdown
+        st.markdown(f"<div class='chat-bubble-bot'>🤖 <b>JAIBOT:</b> {safe_text}</div>", unsafe_allow_html=True)
 
 # ===========================
 # 💡 PROMPTS DEMO
@@ -112,11 +89,7 @@ with c3:
 # ===========================
 # ✍️ INPUT
 # ===========================
-user_message = st.text_area(
-    "Tu mensaje:",
-    placeholder="Ejemplo: ¿Qué hace JAIBOT LITE?",
-    key="input_area"
-)
+user_message = st.text_area("Tu mensaje:", placeholder="Ejemplo: ¿Qué hace JAIBOT LITE?", key="input_area")
 
 c1, c2 = st.columns([1, 1])
 with c1:
@@ -139,36 +112,23 @@ if send_btn and user_message.strip():
         payload = {
             "auth_key": AUTH_KEY,
             "message": user_message,
-            "context": [
-                {"role": role, "content": text}
-                for role, text in st.session_state.chat_history[-5:]
-            ],
+            "context": [{"role": r, "content": t} for r, t in st.session_state.chat_history[-5:]],
         }
-
-        response = requests.post(
-            N8N_WEBHOOK_URL,
-            headers={"Content-Type": "application/json"},
-            json=payload,
-            timeout=40,
-        )
-
+        response = requests.post(N8N_WEBHOOK_URL, headers={"Content-Type": "application/json"}, json=payload, timeout=40)
         if response.status_code == 200:
             data = response.json()
             reply_raw = data.get("reply", "⚠️ Sin respuesta del asistente.")
-            reply_clean = clean_reply(reply_raw)  # 👈 limpieza al guardar
-
-            # Guardamos ya limpio
+            reply_clean = clean_reply(reply_raw)
             st.session_state.chat_history.append(("user", user_message))
             st.session_state.chat_history.append(("assistant", reply_clean))
             st.experimental_rerun()
         else:
             st.error(f"❌ Error {response.status_code}: {response.text}")
-
     except Exception as e:
         st.error(f"⚠️ Error al conectar con n8n: {e}")
 
 # ===========================
-# 🧠 EXPLICATIVO (imagen protegida)
+# 🧠 EXPLICATIVO
 # ===========================
 with st.expander("🧩 ¿Quieres saber cómo funciona JAIBOT LITE?"):
     st.markdown("""
