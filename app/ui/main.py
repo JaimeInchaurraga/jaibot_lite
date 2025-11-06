@@ -92,22 +92,32 @@ if clear_btn:
 # 🧽 LIMPIEZA DE RESPUESTA
 # ===========================
 def clean_reply(text: str) -> str:
-    """Limpia cualquier referencia [x:archivo.txt], [contexto_...] o similares."""
+    """Limpia completamente las referencias [4:...], incluso si los corchetes son Unicode o invisibles."""
     if not text:
         return text
 
-    # Normaliza saltos y espacios
+    import unicodedata
+
+    # Normaliza cualquier carácter raro de espacio o símbolo invisible
+    text = unicodedata.normalize("NFKD", text)
+    text = text.replace("\u200b", "").replace("\ufeff", "").replace("\xa0", " ")
+
+    # Sustituye corchetes Unicode o invisibles por corchetes normales
+    text = text.replace("［", "[").replace("］", "]")
+
+    # Aplasta saltos y espacios
     text = text.replace("\n", " ").replace("\r", " ")
 
-    # Elimina cualquier bloque entre corchetes que contenga 'contexto', '.txt', '.pdf' o dígitos tipo 4:0
+    # Elimina cualquier cosa entre corchetes que contenga dígitos, 'contexto', '.txt', '.pdf', etc.
     text = re.sub(r"\[[^\]]*(\d+:|contexto|\.txt|\.pdf)[^\]]*\]", "", text, flags=re.IGNORECASE)
 
-    # Limpia espacios duplicados, puntos mal colocados y espacios antes de puntos
+    # Vuelve a limpiar espacios duplicados o mal colocados
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r"\s+\.", ".", text)
     text = re.sub(r"\s+,", ",", text)
 
     return text.strip()
+
 
 
 
