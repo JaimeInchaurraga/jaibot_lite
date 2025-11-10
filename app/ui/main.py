@@ -2,17 +2,16 @@ import streamlit as st
 import requests
 import os
 import re
+import unicodedata
 from dotenv import load_dotenv
 from pathlib import Path
-import html
 
 # ===========================
 # ⚙️ CONFIGURACIÓN INICIAL
 # ===========================
 st.set_page_config(page_title="JAIBOT LITE", page_icon="🤖", layout="centered")
-
 st.title("🤖 JAIBOT LITE — Demo Interactiva")
-st.caption("🧩 Versión interfaz: 2025-11-06-v7 (modo texto plano total)")
+st.caption("🍀 Versión interfaz: 2025-11-10-v8 (limpieza Unicode total de corchetes)")
 st.caption("Un asistente creado por **Jaime Inchaurraga** con n8n + Streamlit + OpenAI")
 
 # ===========================
@@ -20,7 +19,6 @@ st.caption("Un asistente creado por **Jaime Inchaurraga** con n8n + Streamlit + 
 # ===========================
 env_path = Path("app/config/secrets.env")
 if env_path.exists():
-    from dotenv import load_dotenv
     load_dotenv(env_path)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -28,19 +26,26 @@ N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
 AUTH_KEY = os.getenv("JAIBOT_AUTH_KEY", "clave_jaibot")
 
 # ===========================
-# 🧽 FUNCIÓN LIMPIEZA
+# 🧽 LIMPIEZA DE TEXTO (FINAL)
 # ===========================
 def clean_reply(text: str) -> str:
-    """Elimina cualquier bloque [ ... ] y caracteres invisibles."""
+    """Elimina bloques con corchetes ASCII y Unicode, además de caracteres invisibles."""
     if not text:
         return text
-    import unicodedata
-    text = unicodedata.normalize("NFKD", text)
-    text = text.replace("\u200b", "").replace("\ufeff", "").replace("\xa0", " ")
+
+    # Normaliza caracteres Unicode raros
+    text = unicodedata.normalize("NFKC", text)
+
+    # Sustituye variantes Unicode por corchetes normales
     text = text.replace("［", "[").replace("］", "]")
-    while re.search(r"\[[^\]]*\]", text):
-        text = re.sub(r"\[[^\]]*\]", "", text)
-    return re.sub(r"\s+", " ", text).strip()
+
+    # Elimina cualquier bloque [ ... ]
+    text = re.sub(r"\[[^\]]*\]", "", text)
+
+    # Limpia espacios dobles y saltos
+    text = re.sub(r"\s+", " ", text).strip()
+
+    return text
 
 # ===========================
 # 💾 SESIÓN
@@ -53,10 +58,10 @@ if "chat_history" not in st.session_state:
 # ===========================
 for role, text in st.session_state.chat_history:
     if role == "user":
-        st.text(f"🧑 Tú: {text}")
+        st.markdown(f"🧑 **Tú:** {text}")
     else:
         cleaned = clean_reply(text)
-        st.text(f"🤖 JAIBOT: {cleaned}")
+        st.markdown(f"🤖 **JAIBOT:** {cleaned}")
 
 # ===========================
 # INPUT
@@ -83,7 +88,12 @@ if send_btn and user_message.strip():
             "message": user_message,
             "context": [{"role": r, "content": t} for r, t in st.session_state.chat_history[-5:]],
         }
-        response = requests.post(N8N_WEBHOOK_URL, headers={"Content-Type": "application/json"}, json=payload, timeout=40)
+        response = requests.post(
+            N8N_WEBHOOK_URL,
+            headers={"Content-Type": "application/json"},
+            json=payload,
+            timeout=40,
+        )
 
         if response.status_code == 200:
             data = response.json()
