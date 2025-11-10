@@ -1,0 +1,99 @@
+==================================================
+📄 CV ESTRUCTURADO — JAIME INCHAURRAGA (parseado para IA)
+==================================================
+
+IDENTIFICACIÓN
+---------------
+Nombre completo: Jaime Inchaurraga Heredia  
+Residencia: Madrid, España  
+Idiomas: Español (nativo), Inglés (profesional)  
+Perfil: Product Manager / Product Owner con formación en Data Science.
+
+EXPERIENCIA PROFESIONAL
+-----------------------
+1️⃣ **PandaGo**
+   Cargo: Product Manager  
+   Sector: Movilidad eléctrica (B2B)  
+   Ubicación: Madrid  
+   Fecha inicio: Noviembre 2024  
+   Fecha fin: Junio 2025  
+   Duración aproximada: 8 meses  
+   Funciones:
+   - Gestión integral del ciclo de producto.
+   - Coordinación de roadmap y stakeholders.
+   - Análisis de métricas y procesos operativos.
+
+2️⃣ **Lazzaro Social Impact**
+   Cargo: Co-Fundador y Product Manager  
+   Sector: SaaS / Impacto social  
+   Ubicación: Madrid  
+   Fecha inicio: Enero 2018 
+   Fecha fin: Diciembre 2024  
+   Duración aproximada: 6 años  
+   Funciones:
+   - Diseño del producto y liderazgo de roadmap.
+   - Dirección de equipo técnico y UX.
+   - Coordinación con ONGs y clientes B2B.
+   - Coordinación de equipos y preparación para la venta entegración tecnológica
+
+3️⃣ **ioBuilders**
+   Cargo: Product Owner  
+   Sector: Blockchain / Fintech  
+   Ubicación: Madrid  
+   Fecha inicio: Enero 2021  
+   Fecha fin: Febrero 2023  
+   Duración aproximada: 2 años  
+   Funciones:
+   - Gestión de backlog y priorización técnica.
+   - Alineación de negocio y desarrollo.
+   - Seguimiento de KPIs y entregas.
+
+4️⃣ **Welever**
+   Cargo: Product Manager (Junior)  
+   Sector: SaaS / RSC corporativa  
+   Ubicación: Madrid  
+   Fecha inicio: Julio 2018  
+   Fecha fin: Enero 2019  
+   Duración aproximada: 10 meses  
+   Funciones:
+   - Soporte a gestión de producto.
+   - Documentación funcional y QA.
+   - Participación en despliegue y soporte a clientes.
+
+FORMACIÓN
+----------
+- Máster en Análisis y Ciencia de Datos — The Bridge (2024–Presente)
+- Posgrado en Marketing Digital — The Power MBA (2019–2020)
+- Grado en Marketing — Universidad Francisco de Vitoria (2014–2018)
+
+CERTIFICACIONES
+---------------
+- Expert Product Owner — European Scrum  
+- Agile Foundations — The Power MBA  
+- Blockchain Essentials — Consensys
+
+COMPETENCIAS
+------------
+Producto y Agile: Jira, Trello, Notion, Confluence, ClickUp, Miro.  
+UX y Diseño: Figma, Diagrams, Canva.  
+Datos y QA: Python, SQL, Power BI, Amplitude, DBeaver, Postman, TestFlight.  
+
+RESUMEN DE TRAYECTORIA
+-----------------------
+- Años totales de experiencia profesional: 6+  
+- En gestión de producto: desde 2018.  
+- En roles de liderazgo o cofundador: desde 2020.  
+- Actual posición: Product Manager en PandaGo (desde enero 2024).  
+
+NOTAS PARA EL MODELO
+--------------------
+- Fechas deben interpretarse literalmente (no aproximar).  
+- Para cálculos de duración:
+  * Lazzaro: 6 años 
+  * ioBuilders: 2 años 
+  * Welever: 1 año  
+- Si se pregunta “¿cuántos años lleva trabajando en producto?”, responder basándose en 2018–actualidad (~7 años en 2025).
+- Si se pregunta por secuencia temporal, respetar el orden cronológico exacto.
+- No inventar nombres de empresas, funciones ni proyectos adicionales.
+
+END OF FILE
