@@ -4,45 +4,34 @@ import os
 import re
 from dotenv import load_dotenv
 from pathlib import Path
-import html  # 👈 para escapar texto
+import html
 
 # ===========================
 # ⚙️ CONFIGURACIÓN INICIAL
 # ===========================
 st.set_page_config(page_title="JAIBOT LITE", page_icon="🤖", layout="centered")
 
-# ===========================
-# 💅 ESTILO GLOBAL
-# ===========================
-st.markdown("""
-<style>
-body { background: linear-gradient(180deg, #f8f9fc 0%, #eef1f8 100%); font-family: 'Inter', sans-serif; }
-.chat-bubble-user { background-color: #e8f0fe; padding: 0.6rem 1rem; border-radius: 1rem; margin-bottom: 0.4rem; max-width: 85%; }
-.chat-bubble-bot  { background-color: #f1f3f4; padding: 0.6rem 1rem; border-radius: 1rem; margin-bottom: 0.4rem; max-width: 85%; white-space: pre-wrap; }
-.demo-chip button { width:100%; }
-</style>
-""", unsafe_allow_html=True)
-
 st.title("🤖 JAIBOT LITE — Demo Interactiva")
-st.caption("🧩 Versión interfaz: 2025-11-06-v6 (render seguro + limpieza definitiva)")
+st.caption("🧩 Versión interfaz: 2025-11-06-v7 (modo texto plano total)")
 st.caption("Un asistente creado por **Jaime Inchaurraga** con n8n + Streamlit + OpenAI")
 
 # ===========================
-# 🔑 CARGAR VARIABLES DE ENTORNO
+# 🔑 VARIABLES DE ENTORNO
 # ===========================
 env_path = Path("app/config/secrets.env")
 if env_path.exists():
+    from dotenv import load_dotenv
     load_dotenv(env_path)
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY", None)
-N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL") or st.secrets.get("N8N_WEBHOOK_URL", None)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
 AUTH_KEY = os.getenv("JAIBOT_AUTH_KEY", "clave_jaibot")
 
 # ===========================
 # 🧽 FUNCIÓN LIMPIEZA
 # ===========================
 def clean_reply(text: str) -> str:
-    """Limpia corchetes, caracteres invisibles y normaliza texto."""
+    """Elimina cualquier bloque [ ... ] y caracteres invisibles."""
     if not text:
         return text
     import unicodedata
@@ -51,55 +40,35 @@ def clean_reply(text: str) -> str:
     text = text.replace("［", "[").replace("］", "]")
     while re.search(r"\[[^\]]*\]", text):
         text = re.sub(r"\[[^\]]*\]", "", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+    return re.sub(r"\s+", " ", text).strip()
 
 # ===========================
-# 💾 ESTADO DE SESIÓN
+# 💾 SESIÓN
 # ===========================
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # ===========================
-# 💬 HISTORIAL (RENDER)
+# 💬 HISTORIAL
 # ===========================
 for role, text in st.session_state.chat_history:
     if role == "user":
-        safe_text = html.escape(text)
-        st.markdown(f"<div class='chat-bubble-user'>🧑 <b>Tú:</b> {safe_text}</div>", unsafe_allow_html=True)
+        st.text(f"🧑 Tú: {text}")
     else:
-        safe_text = html.escape(clean_reply(text))  # 👈 evita interpretación de markdown
-        st.markdown(f"<div class='chat-bubble-bot'>🤖 <b>JAIBOT:</b> {safe_text}</div>", unsafe_allow_html=True)
+        cleaned = clean_reply(text)
+        st.text(f"🤖 JAIBOT: {cleaned}")
 
 # ===========================
-# 💡 PROMPTS DEMO
-# ===========================
-st.markdown("### 💬 Preguntas sugeridas (modo demo)")
-c1, c2, c3 = st.columns(3, gap="small")
-with c1:
-    if st.button("📅 ¿Cuántos años de experiencia tiene Jaime?", use_container_width=True):
-        st.session_state.input_area = "¿Cuántos años de experiencia tiene Jaime?"
-with c2:
-    if st.button("💡 ¿Qué aficiones tiene Jaime?", use_container_width=True):
-        st.session_state.input_area = "¿Qué aficiones tiene Jaime?"
-with c3:
-    if st.button("📊 ¿En qué proyectos ha trabajado Jaime?", use_container_width=True):
-        st.session_state.input_area = "¿En qué proyectos ha trabajado Jaime?"
-
-# ===========================
-# ✍️ INPUT
+# INPUT
 # ===========================
 user_message = st.text_area("Tu mensaje:", placeholder="Ejemplo: ¿Qué hace JAIBOT LITE?", key="input_area")
 
-c1, c2 = st.columns([1, 1])
+c1, c2 = st.columns(2)
 with c1:
-    send_btn = st.button("Enviar", type="primary")
+    send_btn = st.button("Enviar")
 with c2:
     clear_btn = st.button("🧹 Nueva conversación")
 
-# ===========================
-# 🧹 LIMPIAR HISTORIAL
-# ===========================
 if clear_btn:
     st.session_state.chat_history = []
     st.experimental_rerun()
@@ -115,6 +84,7 @@ if send_btn and user_message.strip():
             "context": [{"role": r, "content": t} for r, t in st.session_state.chat_history[-5:]],
         }
         response = requests.post(N8N_WEBHOOK_URL, headers={"Content-Type": "application/json"}, json=payload, timeout=40)
+
         if response.status_code == 200:
             data = response.json()
             reply_raw = data.get("reply", "⚠️ Sin respuesta del asistente.")
@@ -124,28 +94,6 @@ if send_btn and user_message.strip():
             st.experimental_rerun()
         else:
             st.error(f"❌ Error {response.status_code}: {response.text}")
+
     except Exception as e:
         st.error(f"⚠️ Error al conectar con n8n: {e}")
-
-# ===========================
-# 🧠 EXPLICATIVO
-# ===========================
-with st.expander("🧩 ¿Quieres saber cómo funciona JAIBOT LITE?"):
-    st.markdown("""
-    JAIBOT LITE es una demo interactiva creada por **Jaime Inchaurraga**.
-
-    Combina:
-    - 🧠 **OpenAI** como motor de lenguaje  
-    - ⚙️ **n8n** para la lógica y orquestación  
-    - 🌐 **Streamlit** como interfaz visual  
-    - ☁️ **Cloudflare Tunnel** para exponer el backend local  
-
-    El flujo permite enviar mensajes desde la interfaz, procesarlos en n8n
-    y devolver respuestas inteligentes o ejecutar acciones automatizadas.
-    """)
-
-    img_path = Path("app/assets/arquitectura_jaibot.png")
-    if img_path.exists():
-        st.image(str(img_path), caption="Arquitectura del sistema")
-    else:
-        st.info("🖼️ Diagrama de arquitectura no disponible en este entorno.")
